@@ -1,2 +1,2 @@
 Flask==0.12.2
-Request==2.18.4
+Requests==2.18.4
