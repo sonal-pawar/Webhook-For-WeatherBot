@@ -99,4 +99,4 @@ def makeResponse(req):
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     print("starting app on port {} port".format(port))
-    app.run(debug=True, port=port, host='127.0.0.1')
+    app.run(debug=False, port=port, host='127.0.0.1')
