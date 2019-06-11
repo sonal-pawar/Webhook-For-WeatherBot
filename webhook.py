@@ -28,8 +28,6 @@ def webhook():
     return r
 
 def makeResponse(req):
-    result = req.get("result")
-    parameters = result.get("parameters")
     city = parameters.get("geo-city")
     date = parameters.get("date")
     api_key = "8b316cbdc31b46e8ea8aca2e73ed3377"
