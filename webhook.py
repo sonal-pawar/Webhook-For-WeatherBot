@@ -1,72 +1,64 @@
-# Python program to find current 
-# weather details of any city 
-# using openweathermap api 
+import json
+import os
+import requests
 
-# import required modules 
-import requests, json 
+from flask import Flask
+from flask import request
+from flask import make_response
 
-# Enter your API key here 
-api_key = "8b316cbdc31b46e8ea8aca2e73ed3377"
+#  Flask app should start in gloal layout
 
-# base_url variable to store url 
-base_url = "http://api.openweathermap.org/data/2.5/weather?"
+app = Flask(__name__)
 
-# Give city name 
-city_name = input("Enter city name : ") 
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    req = request.get_json(silent=True, force=True)
+    #  force :  when we specify force True then it won't work for checking MIME type. any MIME type converted into JSON
+    # silent :  if incoming data is not in proper JSON format then it will fail without throwing an exception 
+    print(json.dumps(req, indent=4))
 
-# complete_url variable to store 
-# complete url address 
-complete_url = base_url + "appid=" + api_key + "&q=" + city_name 
+# next step
+# Extract parameter values  -> query the weather API -> construct response -> send to dialogflow
 
-# get method of requests module 
-# return response object 
-response = requests.get(complete_url) 
+    res = makeResponse(req)
+    res = json.dumps(res, indent=4)
 
-# json method of response object 
-# convert json format data into 
-# python format data 
-x = response.json() 
+    r = make_response(res)
+    r.headers['Content-Type'] = 'application/json'
+    return r
 
-# Now x contains list of nested dictionaries 
-# Check the value of "cod" key is equal to 
-# "404", means city is found otherwise, 
-# city is not found 
-if x["cod"] != "404": 
+def makeResponse(req):
+    result = req.get("result")
+    parameters = result.get("parameters")
+    city = parameters.get("geo-city")
+    date = parameters.get("date")
+    api_key = "8b316cbdc31b46e8ea8aca2e73ed3377"
+    base_url = "http://api.openweathermap.org/data/2.5/weather?"
+    complete_url = base_url + "appid=" + api_key + "&q=" + city 
+    r = requests.get(complete_url)
+    json_object  = r.json()
+    weather = json_object['list']
+    for i in  range(0,30):
+        if date in weather[i]['dt_txt']:
+            condition = weather[i]['weather'][0]['description']
+            break
+    speech = "The forcast for "+city+ " for "+date+" is  " + condition
 
-	# store the value of "main" 
-	# key in variable y 
-	y = x["main"] 
+    return {
+        "speech": speech,
+        "displayText": speech,
+        "source": "apiai-weather-webhook"
+    }
 
-	# store the value corresponding 
-	# to the "temp" key of y 
-	current_temperature = y["temp"] 
 
-	# store the value corresponding 
-	# to the "pressure" key of y 
-	current_pressure = y["pressure"] 
+# dialogflow expects following things :
+# {
+    # "speech": "", : contains actual text response from server 
+    # "display text":"", what to display on device screen
+    # "source":""   source where we got the respone from
+# }
 
-	# store the value corresponding 
-	# to the "humidity" key of y 
-	current_humidiy = y["humidity"] 
-
-	# store the value of "weather" 
-	# key in variable z 
-	z = x["weather"] 
-
-	# store the value corresponding 
-	# to the "description" key at 
-	# the 0th index of z 
-	weather_description = z[0]["description"] 
-
-	# print following values 
-	print(" Temperature (in kelvin unit) = " +
-					str(current_temperature) +
-		"\n atmospheric pressure (in hPa unit) = " +
-					str(current_pressure) +
-		"\n humidity (in percentage) = " +
-					str(current_humidiy) +
-		"\n description = " +
-					str(weather_description)) 
-
-else: 
-	print(" City Not Found ") 
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    print("starting app on port %d port", port)
+    app.run(debug=False, port=port, host='0.0.0.0')
